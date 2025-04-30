@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:WelcomeAvaloniaLauncher.ViewModels"
+        xmlns:local="clr-namespace:WelcomeAvaloniaLauncher.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -18,35 +19,24 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"></RowDefinition>
-        </Grid.RowDefinitions>
+        </Grid.RowDefinitions>        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="2*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
         
-        <ListBox>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
-            <ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem><ListBoxItem>
-                <Panel Background="Black" Height="100" Width="100"></Panel>
-            </ListBoxItem>
+        <ListBox Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItemVM}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <local:ItemView/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
         </ListBox>
+        
+        <StackPanel Grid.Column="1" Margin="10">
+            <Image Stretch="Uniform" Margin="10" MaxHeight="200" Source="{Binding SelectedItemIcon}"></Image>
+            <Button Content="起動する" Margin="10" IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Command="{Binding LaunchButtonPushed}"></Button>
+        </StackPanel>
     </Grid>
 </Window>

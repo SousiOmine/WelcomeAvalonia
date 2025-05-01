@@ -33,10 +33,19 @@
             </ListBox.ItemTemplate>
         </ListBox>
         
-        <StackPanel Grid.Column="1" Margin="10">
-            <Image Stretch="Uniform" Margin="10" MaxHeight="200" Source="{Binding SelectedItemIcon}"></Image>
-            <Button Content="起動する" Margin="10" IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"
-                    Command="{Binding LaunchButtonPushed}"></Button>
-        </StackPanel>
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <!-- 画像表示領域 (可変) -->
+                <RowDefinition Height="*"/>
+                <!-- ボタン表示領域 (固定) -->
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 画像を Grid の最初の行に配置 -->
+            <Image Grid.Row="0" Stretch="Uniform" Margin="10" MaxHeight="500" Source="{Binding SelectedItemIcon}" VerticalAlignment="Center"/>
+            <!-- ボタンを Grid の最後の行に配置 -->
+            <Button Grid.Row="1" Content="起動する" Margin="10" IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Command="{Binding LaunchButtonPushed}" VerticalAlignment="Bottom"/>
+        </Grid>
     </Grid>
 </Window>

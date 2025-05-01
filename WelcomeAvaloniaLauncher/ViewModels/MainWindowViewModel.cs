@@ -5,6 +5,8 @@ using System.Windows.Input;
 using Avalonia.Media.Imaging;
 using WelcomeAvaloniaLauncher.Models;
 using ReactiveUI;
+using System.IO;
+using System.Text.Json;
 
 namespace WelcomeAvaloniaLauncher.ViewModels;
 
@@ -35,10 +37,41 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
-        // サンプルアイテムを追加
-        Items.Add(new ItemViewModel(new Item { Title = "アイテム1"}));
-        Items.Add(new ItemViewModel(new Item { Title = "アイテム2"}));
-        Items.Add(new ItemViewModel(new Item { Title = "アイテム3"}));
+        var jsonPath = Path.Combine(AppContext.BaseDirectory, "items.json");
+        
+        if (File.Exists(jsonPath))
+        {
+            try
+            {
+                var json = File.ReadAllText(jsonPath);
+                var items = JsonSerializer.Deserialize<Item[]>(json);
+                
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        Items.Add(new ItemViewModel(item));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"JSON読み込みエラー: {ex.Message}");
+            }
+        }
+        
+        if (Items.Count == 0)
+        {
+            var defaultItem = new Item { Title = "デフォルトアイテム" };
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            var defaultJson = JsonSerializer.Serialize(new[] { defaultItem }, options);
+            File.WriteAllText(jsonPath, defaultJson);
+            Items.Add(new ItemViewModel(defaultItem));
+        }
         
         LaunchButtonPushed = ReactiveCommand.Create(() =>
         {
@@ -46,7 +79,12 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 try
                 {
-                    Process.Start(SelectedItemVM.Item.Command);
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = SelectedItemVM.Item.Command,
+                        UseShellExecute = true
+                    };
+                    Process.Start(startInfo);
                 }
                 catch (Exception e)
                 {

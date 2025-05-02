@@ -5,45 +5,71 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="800" Height="450"  
         x:Class="WelcomeAvaloniaLauncher.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="WelcomeAvaloniaLauncher">
+        Title="ランチャー"> <!-- ウィンドウのタイトル -->
 
+    <!-- IDEでプレビューする際の仮ViewModelを設定 -->
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <!-- Grid: ウィンドウのレイアウトを格子状に定義する -->
     <Grid>
+        <!-- Gridの行定義 -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"></RowDefinition>
-        </Grid.RowDefinitions>        
+            <RowDefinition Height="*"></RowDefinition> <!-- 高さを利用可能なスペース全体に広げる -->
+        </Grid.RowDefinitions>
+        <!-- Gridの列定義 -->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"></ColumnDefinition>
-            <ColumnDefinition Width="2*"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition> <!-- 幅を利用可能なスペースの1/3に -->
+            <ColumnDefinition Width="2*"></ColumnDefinition> <!-- 幅を利用可能なスペースの2/3に -->
         </Grid.ColumnDefinitions>
-        
+
+        <!-- ListBox: アイテムのリストを表示するコントロール -->
+        <!-- Grid.Column="0": Gridの最初の列に配置 -->
+        <!-- ItemsSource="{Binding Items}": 表示するアイテムのコレクションをMainWindowViewModelのItemsプロパティにバインド -->
+        <!-- SelectedItem="{Binding SelectedItemVM}": 選択されたアイテムをMainWindowViewModelのSelectedItemVMプロパティにバインド -->
         <ListBox Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItemVM}">
+            <!-- ListBoxの各アイテムを表示するためのテンプレート -->
             <ListBox.ItemTemplate>
                 <DataTemplate>
+                    <!-- 各アイテムをItemViewを使って表示 -->
                     <local:ItemView/>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        
+
+        <!-- 右側の詳細表示エリアのレイアウト Gridの内側にさらにGridを定義 -->
+        <!-- Grid.Column="1": Gridの2番目の列に配置 -->
+        <!-- Margin="10": 外側の余白を10に設定 -->
         <Grid Grid.Column="1" Margin="10">
+            <!-- このGrid内の行定義 -->
             <Grid.RowDefinitions>
-                <!-- 画像表示領域 (可変) -->
+                <!-- 画像表示領域 (利用可能なスペースを占める) -->
                 <RowDefinition Height="*"/>
-                <!-- ボタン表示領域 (固定) -->
+                <!-- ボタン表示領域 (コンテンツに必要な高さ) -->
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- 画像を Grid の最初の行に配置 -->
+            <!-- Image: 画像を表示するコントロール -->
+            <!-- Grid.Row="0": このGridの最初の行に配置 -->
+            <!-- Stretch="Uniform": アスペクト比を保ちながら表示領域に合わせて画像を伸縮 -->
+            <!-- Margin="10": 外側の余白を10に設定 -->
+            <!-- MaxHeight="500": 最大の高さを500に制限 -->
+            <!-- Source="{Binding SelectedItemIcon}": 表示する画像のソースをViewModelのSelectedItemIconプロパティにバインド -->
+            <!-- VerticalAlignment="Center": 垂直方向中央に配置 -->
             <Image Grid.Row="0" Stretch="Uniform" Margin="10" MaxHeight="500" Source="{Binding SelectedItemIcon}" VerticalAlignment="Center"/>
-            <!-- ボタンを Grid の最後の行に配置 -->
+            
+            <!-- Button: 起動ボタン -->
+            <!-- Grid.Row="1": このGridの2番目の行に配置 -->
+            <!-- Content="起動する": ボタンに表示するテキスト -->
+            <!-- Margin="10": 外側の余白を10に設定 -->
+            <!-- IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}": MainWindowViewModelのSelectedItemVMがnullでない(アイテムが選択中な)場合に表示 -->
+            <!-- Command="{Binding LaunchButtonPushed}": ボタンがクリックされたときに実行されるコマンドをMainWindowViewModelのLaunchButtonPushedプロパティにバインド -->
+            <!-- VerticalAlignment="Bottom": 垂直方向下部に配置 -->
             <Button Grid.Row="1" Content="起動する" Margin="10" IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"
                     Command="{Binding LaunchButtonPushed}" VerticalAlignment="Bottom"/>
         </Grid>

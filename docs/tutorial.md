@@ -106,8 +106,12 @@ public class MainWindowViewModel : ViewModelBase
     public string Greeting { get; } = "Welcome to Avalonia!";
 }
 ```
-C#はオブジェクト指向といって、プログラムを**クラス**というデータの設計図っぽいものを組み合わせて表現していきます。このクラスはそれ単体だと設計図に過ぎないので、どこかでクラスから実際のデータを生成（インスタンス化）して動かします。が私よりChatGPTに「C#のオブジェクト指向について説明して」と聞いたほうが10000000000倍良い説明になると思うのでそっちに聞いてください！
+C#はオブジェクト指向といって、プログラムを**クラス**というデータの設計図っぽいものを組み合わせて表現していきます。このクラスはそれ単体だと設計図に過ぎないので、どこかでクラスから実際のデータを生成（インスタンス化）して動かします。
+
+が私よりChatGPTに「C#のオブジェクト指向について説明して」と聞いたほうが10000000000倍良い説明になると思うのでそっちに聞いてください！
+
 本チュートリアルのうちはオブジェクト指向のことは「ふ～ん（存在だけはわかる）」くらいの理解度で大丈夫です（正直、私もそのくらいの理解度）。
+
 ちなみに今回のAvaloniaテンプレートでは、MainWindowViewModelクラスのインスタンス化はApp.axaml.csで行われています。
 
 MainWindow.axamlに戻ります。
@@ -146,4 +150,135 @@ public string Greeting { get; } = "あばばばばばばばばばばば";
 
 # MVVMとは？
 GUIを持ったアプリを開発する際の設計思想のひとつに**MVVM**というものがあります。
-超ざっくり表現すると、プログラムを「処理(Model)」「表示(View)」「表示と処理の間に挟まって仲介したり表示用データを準備したりするやつ(ViewModel)」の3つに分けて開発するという考え方です。
+超ざっくり表現すると、MVVMはModel View ViewModelの略で、プログラムを「処理やデータ(Model)」「表示(View)」「表示と処理の間に挟まって仲介したり表示用データを準備したりするやつ(ViewModel)」の3つに分けて開発するという考え方です。
+
+ModelとViewをがっちり結合するようなプログラムは、小規模であったり使い捨てたりするようなプログラムでは問題になりません。しかし規模の大きいプログラムとなると、見た目か処理のどちらかを変えようとするだけでも、両方の変更が絡み合い、コードが複雑になりやすいという問題があります。
+さらに、コードに対するテストを作成することも難しくなります。例えば、ボタンを押すと実行される処理が正しく実行されるかをテストするには、テスト時にウィンドウを開き、ボタンを押すというめんどくさいテストを書く必要が生じてしまいます。
+
+そこでプログラム全体をModel,View,ViewModelの3つに分けて開発するという考え方が、デスクトップアプリを作成する際の設計思想として広まりました。ModelとViewを完全に分離したうえで、両者の橋渡しをするViewModelを用いることで、コード変更の影響を最小限に抑え、コードのテストも容易になります。GUIライブラリAvaloniaでは、このMVVMの考え方を採用しています。
+
+似たような概念として、「MVC(Model View Controller)」や、「MVP(Model View Presenter)」などがあります。興味を持った方は調べてみてね！~~私もあまり違いがわからず説明できない~~
+
+先ほど作成したテンプレートプロジェクトでは、Model相当のプログラムは用意されておらず、Viewが`MainWindow.axaml`、ViewModelが`MainWindowViewModel.cs`となっています。
+Avaloniaを始めとするMVVMを前提としたライブラリでは、ViewとViewModelの接続を簡単にするために「バインディング」という仕組みが存在します。
+```csharp
+<TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+```
+このなかの`Text="{Binding Greeting}"`という部分が、まさにバインディングを使っている部分となります。
+![バインディング](./img/binding.png)
+画像はバインディングの概要を、例を出して大雑把に説明しようとして描いたものです。
+「ViewModelとView間の接続をかんたんに書けるよ！」くらいの感覚で大丈夫です。
+
+# リスト状に表示してみる
+それではここから、ランチャーアプリを順を追って作成していきます。
+まずはMainWindow.axamlをどのように編集すればいいのかを確かめてみましょう。
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <TextBlock Text="あいうえお"/>
+    <TextBlock Text="かきくけこ"/>
+    <TextBlock Text="さしすせそ"/>
+
+</Window>
+```
+というわけで適当にテキストブロックを連続で配置！
+は`プロパティ Content は複数回設定されています`というエラーが出てしまうので不可能です。
+
+テキストブロックや画像、ボタンといったUI要素を「**コントロール**」といいます。このコントロールなのですが、実はWindowタグ内に同時に1つまでしか配置することができません。
+ではウィンドウに複数のUI要素を配置するにはどうするのかというと、「**パネル**」と呼ばれる種類のコントロールを使います。このパネルは同時に複数のコントロールを配置することができるので、Windowタグ内にパネルを1つ配置し、その中にコントロールを複数個どんどん配置していくという流れになります。
+パネルの種類は標準でたくさん用意されています。[Avaloniaの公式ドキュメント](https://docs.avaloniaui.net/docs/reference/controls/panel)を確認してみてください。
+
+今回は格子状にコントロールを配置できる「Grid」という種類のパネルを使います。
+
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <Grid>
+        <TextBlock Text="{Binding Greeting}"/>
+        <TextBlock Text="あいうえお"/>
+        <TextBlock Text="かきくけこ"/>
+        <TextBlock Text="さしすせそ"/>
+    </Grid>
+
+</Window>
+```
+すると今度はエラー無く、複数のテキストブロックを配置することができました！
+![複数のテキストブロック](./img/スクリーンショット%202025-05-04%20020832.png)
+しかしプレビュー画面を見てみると、位置を中心寄りになるよう設定している最初のテキストブロック以外の3つが、ウィンドウ左上で重なっているようです。
+これは、Gridの定義を行っていないために発生しています。
+
+次のように、MainWindow.axamlを編集してください。
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <TextBlock Grid.Row="1" Text="あいうえお"/>
+        <TextBlock Grid.Row="2" Text="かきくけこ"/>
+        <TextBlock Grid.Row="3" Text="さしすせそ"/>
+    </Grid>
+
+</Window>
+```
+詳細は省きます（ChatGPTに聞け！）が、グリッドの行定義と、各テキストブロックをそれぞれどの行に配置するかを書くようにしました。
+![グリッド定義後](./img/スクリーンショット%202025-05-04%20021558.png)
+すると、各テキストブロックが重ならないように配置されましたね！
+
+グリッドによる場所の指定は、どのような状態でも位置や数が変わらないような場面で有効ですが、今回作成するランチャーアプリでは、登録したアプリの数によって、表示するコントロールの数は変動します。数は可変だが似たようなものを列挙するには、ListBoxというコントロールを用いると便利です。
+
+ListBoxを使った書き方をすると、次のようになります。
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <ListBox>
+        <ListBoxItem>
+            <TextBlock Grid.Row="0" Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </ListBoxItem>
+        <ListBoxItem>
+            <TextBlock Text="あいうえお" />
+        </ListBoxItem>
+        <ListBoxItem>
+            <TextBlock Text="かきくけこ" />
+        </ListBoxItem>
+        <ListBoxItem>
+            <TextBlock Text="さしすせそ" />
+        </ListBoxItem>
+    </ListBox>
+
+</Window>
+```
+
+![リストボックスは選択もできるよ！](./img/スクリーンショット%202025-05-04%20022452.png)
+
+今はMainWindow.axamlだけを編集しているのでわかりにくいのですが、ListBoxはViewModel側からアイテムを追加したり削除したりということが非常にやりやすくなっています。さらに、選択しているアイテムをViewModelから取得することだって簡単に行えます。

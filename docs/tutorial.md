@@ -97,7 +97,7 @@ Riderの画面左側には、プロジェクトのソースコードが並んで
 
 プログラムはおおよそ
 Program.cs→App.axaml.cs→MainWindowViewModel.cs→MainWindow.axaml.cs
-の順に実行されます。Avaloniaプロジェクトでは、Program.csの内容を編集することは基本的にありませんし、App.axaml.csも、ちょっと特殊なことをしようとしなければ編集する必要はありません。
+の順に実行さていきます。Avaloniaプロジェクトでは、Program.csの内容を編集することは基本的にありませんし、App.axaml.csも、ちょっと特殊なことをしようとしなければ編集する必要はありません。
 
 Viewsフォルダ内にある`MainWindow.axaml`を開いてみてください。
 ![MainWindow.axaml](./img/スクリーンショット%202025-05-02%20204627.png)
@@ -176,6 +176,8 @@ public string Greeting { get; } = "あばばばばばばばばばばば";
 # MVVMとは？
 GUIを持ったアプリを開発する際の設計思想のひとつに**MVVM**というものがあります。
 超ざっくり表現すると、MVVMはModel View ViewModelの略で、プログラムを「処理やデータ(Model)」「表示(View)」「表示と処理の間に挟まって仲介したり表示用データを準備したりするやつ(ViewModel)」の3つに分けて開発するという考え方です。
+
+![MVVMかな？](./img/mvvmかな？.png)
 
 ModelとViewをがっちり結合するようなプログラムは、小規模であったり使い捨てたりするようなプログラムでは問題になりません。しかし規模の大きいプログラムとなると、見た目か処理のどちらかを変えようとするだけでも、両方の変更が絡み合い、コードが複雑になりやすいという問題があります。
 さらに、コードに対するテストを作成することも難しくなります。例えば、ボタンを押すと実行される処理が正しく実行されるかをテストするには、テスト時にウィンドウを開き、ボタンを押すというめんどくさいテストを書く必要が生じてしまいます。
@@ -635,7 +637,7 @@ MainWindow.axamlのボタンの定義を次のように変更します。
 
 `IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"`が追加されました。
 IsVisibleはその名の通り、ボタンコントロールの表示非表示を決められるプロパティなのですが、これは本来TrueかFalseの値(Bool型)しか受け付けません。
-しかしながら、IsNotNullコンバーターを指定してあげることで、アイテムが選択されているかの状態をTrueかFalseの値に変換して受け渡しているのです。
+しかしながら、IsNotNullコンバーターを指定してあげることで、アイテムが選択されているかの状態をTrueかFalseの値に変換して受け渡しているのです。ここでは SelectedItemVM が選択されていれば (nullでなければ)`true`を、選択されていなければ (nullなら)`false`を返し、ボタンの表示/非表示 (IsVisible) を切り替えています
 
 これらのコンバーターはAvalonia標準でたくさん用意されていますし[（公式ドキュメント）](https://docs.avaloniaui.net/docs/reference/built-in-data-binding-converters)、
 、自作することもできます。

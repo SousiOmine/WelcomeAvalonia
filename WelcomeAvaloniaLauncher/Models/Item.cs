@@ -3,8 +3,6 @@ namespace WelcomeAvaloniaLauncher.Models;
 // ランチャーで表示・実行するアイテムを表すクラス (Model)
 public class Item
 {
-    // アイテムの一意な識別子
-    public string Id { get; set; } = string.Empty;
     // アイテムのタイトル (例: "Visual Studio Code", "ペイント")
     public string Title { get; set; } = string.Empty;
 

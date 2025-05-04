@@ -3,14 +3,19 @@
 
 今回はプログラミング言語にC#、ウィンドウやボタンといったGUIの表示にAvalonia（アバロニア）というライブラリを使用します。なので道中どこかで詰まるところがあれば、GoogleやチャットAIで「C# ●●(困ったこと)」「Avalonia ●●」と検索すれば、解決策が見つかるはずです。
 
+本チュートリアルでは時折コードの意味の説明を行いますが、覚える必要は全くありません。コードは「ふーん」くらいで流し読みしながら、実際にエディタを開いてコードを写してみてください。
+
 [!WARNING]
 2025年5月時点のChatGPT無料版で使えるモデルでは、ほとんどAvaloniaの知識を学習していないようです。ChatGPT無料版にAvaloniaについて質問すると大嘘をつかれる可能性があるため、より最新の情報を学習しているGPT4.1やGemini、DeepSeekなどを利用することをお勧めします。
 
 # どんなアプリを作るの？
 非常にシンプルなランチャーアプリを作ります。
 ![完成後のイメージ](./img/スクリーンショット%202025-05-02%20183201.png)
-実行ファイルと同じ場所にあるjsonファイルでアイテムを登録してからアプリを起動すると、左のリストから選択して起動することができます。
+左のリストからアプリを選択し、起動することができます。
 機能は激ショボですが、その分少ない手数で作れます。
+https://github.com/SousiOmine/WelcomeAvalonia/tree/main/WelcomeAvaloniaLauncher
+で、かんたんな説明付きの完成品コードを確認できます。
+こちらの完成品では、jsonファイルからアプリリストを読み込む機能もおまけでついています。
 # 環境構築
 
 C#プログラムを開発するために、パソコンに.NET SDKというソフトウェアをインストールする必要があります。
@@ -157,7 +162,7 @@ ModelとViewをがっちり結合するようなプログラムは、小規模�
 
 そこでプログラム全体をModel,View,ViewModelの3つに分けて開発するという考え方が、デスクトップアプリを作成する際の設計思想として広まりました。ModelとViewを完全に分離したうえで、両者の橋渡しをするViewModelを用いることで、コード変更の影響を最小限に抑え、コードのテストも容易になります。GUIライブラリAvaloniaでは、このMVVMの考え方を採用しています。
 
-似たような概念として、「MVC(Model View Controller)」や、「MVP(Model View Presenter)」などがあります。興味を持った方は調べてみてね！~~私もあまり違いがわからず説明できない~~
+似たような概念として、「MVC(Model View Controller)」や、「MVP(Model View Presenter)」などがあります。興味を持った方は調べてみてね！~~これらと比較するとMVVMはViewとViewModelの間の結合がかなり弱いという特徴があったりします。たとえばMVCだとControllerはViewを知ることは許容されるのですがMVVMではViewModelがViewを知ることは厳禁だったりと。いろいろ書いたけどMVVMは私もあまり違いがわからず説明できない~~
 
 先ほど作成したテンプレートプロジェクトでは、Model相当のプログラムは用意されておらず、Viewが`MainWindow.axaml`、ViewModelが`MainWindowViewModel.cs`となっています。
 Avaloniaを始めとするMVVMを前提としたライブラリでは、ViewとViewModelの接続を簡単にするために「バインディング」という仕組みが存在します。
@@ -282,3 +287,363 @@ ListBoxを使った書き方をすると、次のようになります。
 ![リストボックスは選択もできるよ！](./img/スクリーンショット%202025-05-04%20022452.png)
 
 今はMainWindow.axamlだけを編集しているのでわかりにくいのですが、ListBoxはViewModel側からアイテムを追加したり削除したりということが非常にやりやすくなっています。さらに、選択しているアイテムをViewModelから取得することだって簡単に行えます。
+
+# コントロールを作る
+先ほどはテキストブロックをそのままListBoxのアイテムとして配置してみました。
+![完成後のイメージ](./img/スクリーンショット%202025-05-02%20183201.png)
+ここからは、完成後イメージの画面左側にあるアプリリストを作っていきます。こちらはアイテムによってアイコンやテキストが異なり、かつ登録されるアプリの数によってアイテムの数も増減します。
+
+アプリリストのアイテム1つを定義するために必要な情報を考えます。無数にやりようはあるはずですが、本チュートリアルでは以下のように定義します。
+- アイテム名（文字列）
+- アイコンに使う画像のパス（文字列）
+- アプリを起動するためのコマンド（文字列）
+
+今回作成するランチャーでは、アプリの起動にコンソールに入力するコマンドを用います。たとえばWindowsでは、起動したいファイルのパスをコマンドプロンプトに入力するとそのアプリを起動することができますが、このコマンドをアイテムとしてそのまま登録し、C#コードから実行という~~手抜き~~超簡易実装を目指します。この実装では理論上、シェルスクリプトなども登録することができ自由度が高い一方、セキュリティ的にはかなりよくない実装でもあります。
+
+これらを定義するためのクラスを作成します。
+Modelsフォルダを右クリックし、追加→クラス/インターフェースをクリックしてください。
+![Modelsフォルダの右クリック](./img/スクリーンショット%202025-05-04%20123332.png)
+選択後に新しく作成するクラスの名前を決めるダイアログが出現するので、「Item」と入力しEnterを押してください。
+
+すると、Modelsフォルダ内にItem.csというファイルが作成され、中身はこのようになっているはずです。
+```csharp
+namespace kariLauncher.Models;
+
+public class Item
+{
+    
+}
+```
+このItem.csを、以下のように編集してください。
+```csharp
+namespace kariLauncher.Models;
+
+public class Item
+{
+    public string Title { get; set; } = string.Empty;
+    public string IconPath { get; set; } = string.Empty;
+    public string Command { get; set; } = string.Empty;
+}
+```
+アイテム名とアイコン画像のパス、アプリ起動用のコマンドを格納する変数を定義しました。変数定義の右側にある`string.Empty`は、変数を定義する際に空の文字列を代入するためのものです。
+
+次に、このItemクラスを表示するために、新しい「コントロール」を作成します。
+コントロールは既存のコントロールを組み合わせて、新しいコントロールを作成することができるのです。
+今回はItemViewという名前でコントロールを作成します。
+![新しいコントロールの作成](./img/スクリーンショット%202025-05-05%20012541.png)
+Viewsフォルダを右クリックし、追加→Avalonia User Controlをクリックし、ファイル名を`ItemView.axaml`としてください。
+
+作成後に今度はItemViewに対応するViewModelも同時に作成します。
+ViewModelsフォルダを右クリックし、`ItemViewModel`クラスを作成してください。
+作成されたItemViewModel.csを、以下のように編集してください。
+```csharp
+using System;
+using Avalonia.Media.Imaging;
+using kariLauncher.Models;
+
+namespace kariLauncher.ViewModels;
+
+public class ItemViewModel
+{
+    public Item Item { get; }
+    public string Title { get; }
+    public Bitmap? Icon { get; private set; }
+
+    public ItemViewModel(Item targetItem)
+    {
+        Item = targetItem;
+        Title = targetItem.Title;
+
+        if (!string.IsNullOrEmpty(targetItem.IconPath))
+        {
+            try
+            {
+                Icon = new Bitmap(targetItem.IconPath);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }        
+        }
+    }
+}
+```
+クラス外からも見える変数として、アイテムのデータを保持する`Item`、
+アイテムの名前を公開する`Title`、
+アイコン画像を保持する`Icon`を定義しました。
+
+`public ItemViewModel(Item targetItem)`以降のコードはコンストラクタという、
+新しいインスタンスを生成する際に一度だけ実行される特殊な処理です。
+コンストラクタ内では、渡されたアイテムの内容を自身の変数に格納したり、
+アイコン画像のパスから画像を読み込んだりしています。
+
+それではこのItemViewModelの内容をViewで表示するために、ItemView.axamlを編集していきましょう。
+
+```xml
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:kariLauncher.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="kariLauncher.Views.ItemView"
+             x:DataType="vm:ItemViewModel">
+    <StackPanel Orientation="Horizontal" Spacing="20">
+        <Image Source="{Binding Icon}" Width="32" Height="32" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+    </StackPanel>
+</UserControl>
+```
+まず冒頭のUserControlにて、`xmlns:vm="clr-namespace:kariLauncher.ViewModels"`と`x:DataType="vm:ItemViewModel"`の記述を追加しました。
+これはItemViewに自身のViewModelを指定するためのものです。
+
+今回用いているPanelは`StackPanel`というもので、縦または横方向にコントロールを並べることができます。今回は横並びとなるよう設定しています。
+あとはViewModelにある変数とバインディングしたImageやTextBlockを配置したり、余白や大きさを設定しているといった感じです。
+
+# リストxデータバインディング
+さきほど作成したItemViewコントロールをリストボックスで表示するために、MainWindow.axamlとMainWindowViewModel.csを編集していきます。
+
+まずはMainWindowViewModel内で、複数のアイテムを格納するためのコレクションというものを定義していきます。
+なお以後、初期状態で定義してあった`Greeting`は不要なので消してしまって大丈夫です。
+```csharp
+public class MainWindowViewModel : ViewModelBase
+{
+    public ObservableCollection<ItemViewModel> Items { get; } = new();
+}
+```
+
+ObservableCollectionは、コレクションに変更があった場合に、Viewに変更されたことを通知する機能がついたコレクションクラスです。このItemsコレクションにItemViewModelの値を追加したり削除したりすると、Viewにも自動的に反映されます。便利！
+
+次にMainWindow.axamlも、ListBox内でItemsコレクションをバインドするように変更していきます。
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        xmlns:views="clr-namespace:kariLauncher.Views"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <ListBox ItemsSource="{Binding Items}">
+        <ListBox.ItemTemplate>
+            <DataTemplate>
+                <views:ItemView/>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+
+
+</Window>
+```
+
+MainWindowから他のViewを参照するために、`clr-namespace:kariLauncher.Views`を宣言しています。
+
+ListBox内ではItemsSourceというプロパティにItemsコレクションをバインドしています。ItemsSourceは読んで字のごとく、ここにバインドされたものがリストボックスに表示されます。
+ItemTemplate~の箇所は、今回はコントロールを作ってコードを分けてしまったためシンプルになっていますが、やろうと思えば複雑で自由度の高い記述が可能です。
+
+それではアプリを起動！
+![起動したけど何も出ない！](./img/スクリーンショット%202025-05-05%20025954.png)
+
+何も表示されない！？
+
+MainWindowViewModelのItemsコレクションに、アイテムが1個も入っていないからですね。
+テキトーにアイテムを追加してみましょう。
+MainWindowViewModelにコンストラクタを追加し、コンストラクタ内でアイテムを追加する処理を書きます。
+```csharp
+public class MainWindowViewModel : ViewModelBase
+{
+    public ObservableCollection<ItemViewModel> Items { get; } = new();
+
+    public MainWindowViewModel()
+    {
+        Items.Add(new ItemViewModel(new Item { Title = "VisualStudioCode", IconPath = "path/to/vscodeのアイコン画像.png", Command = "code" }));
+    }
+}
+```
+IconPathには、用意したお好きな画像のファイルパスを指定してください。私はVSCodeのアイコンをWikipediaよりダウンロードし、そのパスを指定しました。起動すると...？
+
+![アイテム出た！](./img/スクリーンショット%202025-05-05%20030625.png)
+アイテムが表示されました！
+このItemsにたくさんアイテムを追加する処理を書けば、その分たくさん表示されるはずです。いろいろやって試してね！
+
+# 画面右を作る
+ここまでくれば後は簡単！
+「ふ～ん」くらいの気分で大丈夫なので、ささっと画面を作っていきます。
+MainWindowViewModel.cs
+```csharp
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Avalonia.Media.Imaging;
+using kariLauncher.Models;
+using ReactiveUI;
+
+namespace kariLauncher.ViewModels;
+
+public class MainWindowViewModel : ViewModelBase
+{
+    public ObservableCollection<ItemViewModel> Items { get; } = new();
+
+    public ItemViewModel? SelectedItemVM
+    {
+        get => _selectedItemVM;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedItemVM, value);
+            SelectedItemIcon = value?.Icon;
+        }
+    }
+    
+    public Bitmap? SelectedItemIcon
+    {
+        get => _selectedItemIcon;
+        set => this.RaiseAndSetIfChanged(ref _selectedItemIcon, value);
+    }
+    
+    public ICommand LaunchButtonPushed { get; }
+
+    private ItemViewModel? _selectedItemVM;
+    private Bitmap? _selectedItemIcon;
+
+    public MainWindowViewModel()
+    {
+        Items.Add(new ItemViewModel(new Item { Title = "VisualStudioCode", IconPath = "path/to/vscodeのアイコン画像.png", Command = "code" }));
+    }
+}
+```
+
+SelectedItemVM変数とSelectedItemIcon変数は、**双方向バインディング**（View→ViewModelだけではなく、ViewModelで値を書き換えるとViewにも反映される）のため若干変わった書き方をしています。このへんを説明すると長くなるのでなんとなくこういう概念があるとだけ！
+
+LaunchButtonPushedという変数も定義しています。これはボタンを押したときに処理を実行する際に使うものですが、今はまだ何も処理を書いていません。
+
+続いてMainWindow.axamlがこちら
+```xml
+<Window xmlns="https://github.com/avaloniaui"
+        省略
+        Title="kariLauncher">
+
+    <Design.DataContext>
+        省略
+    </Design.DataContext>
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+        
+        <ListBox Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItemVM}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <views:ItemView/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            
+            <Image Grid.Row="0" Stretch="Uniform" Margin="10" MaxHeight="500" Source="{Binding SelectedItemIcon}" VerticalAlignment="Center"></Image>
+            <Button Grid.Row="1" Content="起動する" Margin="10" Command="{Binding LaunchButtonPushed}"></Button>
+        </Grid>
+    </Grid>
+</Window>
+```
+
+Gridが入れ子になっていたり、リストボックスで選択中のアイテムのバインディングを追加したりしています。
+後半で使っているMarginやMaxHeightなどは、見た目を整えるために設定しているものです。このあたりはおおよそ読んだままの意味となっています。試行錯誤してみるのも楽しいかもしれません。
+
+起動してリストからアイテムを選ぶと、しっかり右側に画像とボタンが表示されるはずです！
+![画像とボタン表示](./img/スクリーンショット%202025-05-05%20033207.png)
+
+# ボタンを押してアプリを起動させる
+ボタンを押してアプリを起動する処理を書いていきます。
+
+MainWindowViewModel.csのコンストラクタで、先ほどちらっと出てきたLaunchButtonPushedを定義する処理を書いていきます。
+```csharp
+public MainWindowViewModel()
+{
+    Items.Add(new ItemViewModel(new Item { Title = "VisualStudioCode", IconPath = "C:\\Users\\mainpc_r7700\\Downloads\\Visual_Studio_Code_1.35_icon.svg.png", Command = "code" }));
+    
+    LaunchButtonPushed = ReactiveCommand.Create(() =>
+    {
+        if (!string.IsNullOrEmpty(SelectedItemVM?.Item.Command) && SelectedItemVM is not null)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = SelectedItemVM.Item.Command,
+                    UseShellExecute = true
+                };
+                Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+    });
+}
+```
+
+`LaunchButtonPushed = ReactiveCommand.Create(() =>`のあとに書かれた部分が、ボタンを押したときに実行される処理となっています。詳細は省きますがざっくり言うと「アイテムを選択中でアイテムにコマンドが書かれていた場合、選択中のアイテムのコマンドを実行する」という感じの処理をしています。
+
+仮でItemsに追加したアイテムにコマンドを設定してからビルドして実行してみましょう。
+私のパソコンにはVisualStudioCodeがインストールされているのですが、そのようなパソコンでは`code`というコマンドでVSCodeを起動できます。私は`code`をコマンドとして設定しました。そうでないアプリも、`C:\Program Files\~うんたらかんたら~\BF2042.exe`のように設定してあげれば、それを実行するコマンドとして設定することが可能です。
+
+![起動ボタン成功！](./img/スクリーンショット%202025-05-05%20035207.png)
+VisualStudioCodeアイテムを選択して「起動する」ボタンを押すと、無事VSCodeを起動することができました！
+
+# 便利なコンバーター
+![選択してないときでもボタンが出てるのだっせーよな！](./img/スクリーンショット%202025-05-05%20035444.png)
+現在の状態では、アイテムを選択していない状態でも「起動する」ボタンが表示されっぱなしになっています。これでは不格好なので、アイテムを選択していない状態では非表示、選択中は表示としたいです。
+
+これもバインディングを頑張れば作ることができるのですが、より簡単な方法を紹介します。
+
+MainWindow.axamlのボタンの定義を次のように変更します。
+```xml
+<Button Grid.Row="1" Content="起動する" Margin="10" IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Command="{Binding LaunchButtonPushed}" VerticalAlignment="Bottom"/>
+```
+
+`IsVisible="{Binding SelectedItemVM, Converter={x:Static ObjectConverters.IsNotNull}}"`が追加されました。
+IsVisibleはその名の通り、ボタンコントロールの表示非表示を決められるプロパティなのですが、これは本来TrueかFalseの値(Bool型)しか受け付けません。
+しかしながら、IsNotNullコンバーターを指定してあげることで、アイテムが選択されているかの状態をTrueかFalseの値に変換して受け渡しているのです。
+
+これらのコンバーターはAvalonia標準でたくさん用意されていますし[（公式ドキュメント）](https://docs.avaloniaui.net/docs/reference/built-in-data-binding-converters)、
+、自作することもできます。
+とても便利な機能なので、手を抜きたいときにじゃんじゃん使います。
+
+![適用後1](./img/スクリーンショット%202025-05-05%20040404.png)
+コード変更後の様子です。アイテムを選択していない状態ではボタンは表示されませんが
+![適用後2](./img/スクリーンショット%202025-05-05%20040512.png)
+アイテムを選択するとボタンが表示されます！
+
+# 次はどうしたらいい？
+お疲れさまでした！本チュートリアルにおける解説内容は以上となります。
+
+最初に述べた[完成品のコード](https://github.com/SousiOmine/WelcomeAvalonia/tree/main/WelcomeAvaloniaLauncher)では、jsonファイルからアプリリストを読み込む機能も搭載しています。興味のある方はそれを参考にして、自分でアプリリストを読み込むように改良してみるところから始めるのがいいと思います。
+
+それができたら、画面配置をニンテンドースイッチに寄せるとか、アプリをアプリ上で追加できるようにしてみるとか、アプリを削除できるようにしてみるとか、いろいろ挑戦してみてください！このチュートリアルをチャットAIに渡して「次どうしよっか？」と聞くのもいいかもしれません。
+
+# 参考になりそうなウェブサイト
+
+公式チュートリアル系
+- [MicrosoftのC#チュートリアル](https://learn.microsoft.com/ja-jp/dotnet/csharp/tour-of-csharp/tutorials/)
+- [Avaloniaの公式ドキュメント](https://docs.avaloniaui.net/)
+- [Avalonia公式のチュートリアル 超かっこいい音楽アプリ（の見た目）を作れる](https://docs.avaloniaui.net/docs/tutorials/music-store-app/)
+
+個人ブログ
+- [Avalonia UI 超入門](https://zenn.dev/inuinu/articles/avalonia-ui-for-absolute-beginners)
+- [VSCodeでAvalonia UI ～Epoxyを添えて～](https://zenn.dev/inuinu/scraps/7687183f4a4b02)
+
+私が以前に書いた記事
+- [AvaloniaのListBoxで複数選択を取得する](https://qiita.com/SousiOmine/items/a151485bf609b23d6539)
+- [Avaloniaでドラッグ&ドロップでファイルを受け取る](https://qiita.com/SousiOmine/items/7b5cfbf1505176b19fd0)
